@@ -1,4 +1,4 @@
-name: Build and Push Docker Image
+name: Build and Push Docker Image (Python 3.8)
 
 on:
   push:
@@ -31,13 +31,13 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-           # Define the base image variable
+      # Define the base image variable
       - name: Define BASE_IMAGE
-        run: echo "BASE_IMAGE=ubuntu:23.10" >> $GITHUB_ENV
+        run: echo "BASE_IMAGE=ubuntu:20.04" >> $GITHUB_ENV
 
       # Define the Python version variable
       - name: Define PYTHON_VERSION
-        run: echo "PYTHON_VERSION=python3.11" >> $GITHUB_ENV
+        run: echo "PYTHON_VERSION=python3.8" >> $GITHUB_ENV
 
       # Generate the current date in YYYYMMDD format
       - name: Get the current date
@@ -63,8 +63,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile
+          file: ./Dockerfile-no-venv
           push: true
           platforms: linux/amd64,linux/arm64,linux/arm/v7
-          #tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
           tags: ghcr.io/${{ github.repository }}:${{ env.DOCKER_IMAGE_TAG }}
