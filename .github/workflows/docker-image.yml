@@ -63,6 +63,8 @@ jobs:
           tags: |
             type=raw,value=${{ env.DOCKER_IMAGE_TAG }}
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+          labels:
+            org.opencontainers.image.description=python-talib with ${{ env.PYTHON_VERSION }}, built on ${{ env.CURRENT_DATE }}
           annotations: |
             org.opencontainers.image.description=python-talib with ${{ env.PYTHON_VERSION }}, built on ${{ env.CURRENT_DATE }}
 
@@ -73,4 +75,5 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.annotations }}
