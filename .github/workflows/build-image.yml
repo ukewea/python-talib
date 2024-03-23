@@ -1,34 +1,51 @@
-name: Build and Push Docker Image
+name: Build and Push Image
 
 on:
-  push:
-    branches:
-      - main
+  # push:
+  #   branches:
+  #     - main
+  schedule:
+    - cron: '0 0 * * 3'
+  workflow_dispatch:
 
 jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      image_name: ${{ steps.set_output.outputs.image_name }}
+    steps:
+      - name: Set the Image Name
+        id: set_output
+        run: echo "image_name=ghcr.io/${{ github.repository }}_single-arch" >> $GITHUB_OUTPUT
+
+
   build-linux-amd64:
+    needs: setup
     uses: ./.github/workflows/reusable--docker-build.yaml
     with:
-      images: ghcr.io/${{ github.repository }}_single-arch
+      images: ${{ needs.setup.outputs.image_name }}
       context: .
       platforms: linux/amd64
 
   build-linux-arm64:
+    needs: setup
     uses: ./.github/workflows/reusable--docker-build.yaml
     with:
-      images: ghcr.io/${{ github.repository }}_single-arch
+      images: ${{ needs.setup.outputs.image_name }}
       context: .
       platforms: linux/arm64
 
   build-linux-armv7:
+    needs: setup
     uses: ./.github/workflows/reusable--docker-build.yaml
     with:
-      images: ghcr.io/${{ github.repository }}_single-arch
+      images: ${{ needs.setup.outputs.image_name }}
       context: .
       platforms: linux/arm/v7
 
   build:
     needs:
+      - setup
       - build-linux-amd64
       - build-linux-arm64
       - build-linux-armv7
@@ -85,6 +102,6 @@ jobs:
           index-annotations: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
           sources: |
-            ghcr.io/${{ github.repository }}_single-arch@${{ needs.build-linux-amd64.outputs.digest }}
-            ghcr.io/${{ github.repository }}_single-arch@${{ needs.build-linux-arm64.outputs.digest }}
-            ghcr.io/${{ github.repository }}_single-arch@${{ needs.build-linux-armv7.outputs.digest }}
+            ${{ needs.setup.outputs.image_name }}@${{ needs.build-linux-amd64.outputs.digest }}
+            ${{ needs.setup.outputs.image_name }}@${{ needs.build-linux-arm64.outputs.digest }}
+            ${{ needs.setup.outputs.image_name }}@${{ needs.build-linux-armv7.outputs.digest }}
