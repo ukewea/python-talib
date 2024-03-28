@@ -60,14 +60,14 @@ jobs:
           flavor: latest=false
 
       - name: Build and Push
-        uses: docker/build-push-action@v5
+        uses: int128/kaniko-action@v1
         id: build-push
         with:
           push: true
           context: ${{ inputs.context }}
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
-          platforms: ${{ inputs.platforms }}
+          kaniko-args: --custom-platform "${{ inputs.platforms }}"
 
       - name: Print the Image Digest
         run: echo "The image digest is ${{ steps.build-push.outputs.digest }}"
