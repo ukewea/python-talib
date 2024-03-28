@@ -67,7 +67,7 @@ jobs:
           context: ${{ inputs.context }}
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
-          kaniko-args: --custom-platform "${{ inputs.platforms }}"
+          kaniko-args: --custom-platform ${{ inputs.platforms }}
 
       - name: Print the Image Digest
         run: echo "The image digest is ${{ steps.build-push.outputs.digest }}"
