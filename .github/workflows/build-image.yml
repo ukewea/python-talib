@@ -1,0 +1,107 @@
+name: Build and Push Image
+
+on:
+  # push:
+  #   branches:
+  #     - main
+  schedule:
+    - cron: '0 0 15 */2 *'
+  workflow_dispatch:
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      image_name: ${{ steps.set_output.outputs.image_name }}
+    steps:
+      - name: Set the Image Name
+        id: set_output
+        run: echo "image_name=ghcr.io/${{ github.repository }}_single-arch" >> $GITHUB_OUTPUT
+
+
+  build-linux-amd64:
+    needs: setup
+    uses: ./.github/workflows/reusable--docker-build.yaml
+    with:
+      images: ${{ needs.setup.outputs.image_name }}
+      context: .
+      platforms: linux/amd64
+
+  build-linux-arm64:
+    needs: setup
+    uses: ./.github/workflows/reusable--docker-build.yaml
+    with:
+      images: ${{ needs.setup.outputs.image_name }}
+      context: .
+      platforms: linux/arm64
+
+  build-linux-armv7:
+    needs: setup
+    uses: ./.github/workflows/reusable--docker-build.yaml
+    with:
+      images: ${{ needs.setup.outputs.image_name }}
+      context: .
+      platforms: linux/arm/v7
+
+  build:
+    needs:
+      - setup
+      - build-linux-amd64
+      - build-linux-arm64
+      - build-linux-armv7
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      packages: write
+
+    steps:
+      - name: Print the Image Digest
+        run: echo "The amd64 image digest is ${{ needs.build-linux-amd64.outputs.digest }}"
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Define the base image variable
+      - name: Define BASE_IMAGE
+        run: echo "BASE_IMAGE=ubuntu:23.10" >> $GITHUB_ENV
+
+      # Define the Python version variable
+      - name: Define PYTHON_VERSION
+        run: echo "PYTHON_VERSION=python3.11" >> $GITHUB_ENV
+
+      # Generate the current date in YYYYMMDD format
+      - name: Get the current date
+        run: echo "CURRENT_DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
+
+      # Define the Docker image tag, removing ":" from the BASE_IMAGE
+      - name: Define Docker Image Tag
+        run: |
+          CLEANED_BASE_IMAGE="${BASE_IMAGE//:}"
+          echo "DOCKER_IMAGE_TAG=${CLEANED_BASE_IMAGE}-${PYTHON_VERSION}-${CURRENT_DATE}" >> $GITHUB_ENV
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=${{ env.DOCKER_IMAGE_TAG }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Push multi-architectures container image manifest
+        uses: int128/docker-manifest-create-action@v2
+        id: build
+        with:
+          index-annotations: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
+          sources: |
+            ${{ needs.setup.outputs.image_name }}@${{ needs.build-linux-amd64.outputs.digest }}
+            ${{ needs.setup.outputs.image_name }}@${{ needs.build-linux-arm64.outputs.digest }}
+            ${{ needs.setup.outputs.image_name }}@${{ needs.build-linux-armv7.outputs.digest }}
