@@ -69,11 +69,11 @@ jobs:
 
       # Define the base image variable
       - name: Define BASE_IMAGE
-        run: echo "BASE_IMAGE=ubuntu:23.10" >> $GITHUB_ENV
+        run: echo "BASE_IMAGE=ubuntu:24.04" >> $GITHUB_ENV
 
       # Define the Python version variable
       - name: Define PYTHON_VERSION
-        run: echo "PYTHON_VERSION=python3.11" >> $GITHUB_ENV
+        run: echo "PYTHON_VERSION=python3.12" >> $GITHUB_ENV
 
       # Generate the current date in YYYYMMDD format
       - name: Get the current date

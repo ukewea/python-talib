@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=ubuntu:23.10
+ARG BASE_IMAGE=ubuntu:24.04
 FROM ${BASE_IMAGE}
 
 LABEL org.opencontainers.image.authors="ukewea https://github.com/ukewea"
