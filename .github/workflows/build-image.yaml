@@ -15,6 +15,10 @@ on:
         description: Passed to docker/build-push-action
         type: string
         required: true
+      runner-labels:
+        description: Runner labels
+        type: string
+        required: true
     outputs:
       digest:
         description: digest
@@ -22,12 +26,12 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.runner-labels) }}
 
     permissions:
       packages: write
 
-    timeout-minutes: 120
+    timeout-minutes: 300
 
     outputs:
       digest: ${{ steps.build-push.outputs.digest }}

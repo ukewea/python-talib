@@ -92,22 +92,21 @@ RUN /ctr-py-venv/bin/pip install pandas scikit-learn
 Here's a simple example (`script.py`) to demonstrate using **TA-Lib** and **Pandas** within this Docker image:
 
 ```python
-import pandas as pd
-import numpy as np
+import random
 import talib
 
-# Generate some random closing prices
-np.random.seed(42)  # For reproducible results
-close_prices = np.random.rand(100) * 100
-
-# Create a pandas DataFrame
-df = pd.DataFrame({'close': close_prices})
+# Generate a list of 100 pseudo-random "closing prices" 
+random.seed(42)  # For reproducible results
+close_prices = [random.random() * 100 for _ in range(100)]
 
 # Compute a 10-period Simple Moving Average using TA-Lib
-df['SMA_10'] = talib.SMA(df['close'], timeperiod=10)
+sma_10 = talib.SMA(close_prices, timeperiod=10)
 
-print("Last 10 rows of the DataFrame with SMA_10:")
-print(df.tail(10))
+print("Last 10 closing prices:")
+print(close_prices[-10:])
+
+print("\nLast 10 values of the 10-period SMA:")
+print(sma_10[-10:])
 ```
 
 To run this script using the provided Docker image, save it as `script.py` in the same directory as `docker-compose.yaml` and run `docker-compose up`.
