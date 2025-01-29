@@ -9,10 +9,13 @@ This setup enables you to quickly get started with TA-Lib and run Python scripts
 - **Base OS**: Ubuntu 24.04
 - **Python Version**: Python 3.12
 - **Included Libraries**:  
-  - **TA-Lib** compiled from source  
-  - **TA-Lib (Python bindings)** installed in a Python virtual environment located at `/ctr-py-venv`
-- **Use Cases**: Quickly run Python scripts that do data processing or technical analysis using TA-Lib.  
-  - For example, scripts requiring `pandas` plus the **TA-Lib** indicators.
+  - **TA-Lib**:
+  - **Version 0.6.4** (from [official `.deb` packages](https://github.com/TA-Lib/ta-lib/releases)) on `amd64` and `arm64`
+  - **Version 0.4.0** (compiled from local source) on `armv7`
+  - **TA-Lib (Python bindings)** installed in a Python virtual environment located at `/venv`
+
+> **Note**  
+> If you use an architecture unsupported by the 0.6.4 pre-compiled `.deb` (e.g., armv7), this image automatically falls back to building TA-Lib 0.4.0 from source.
 
 ## Getting Started
 
@@ -23,7 +26,7 @@ This setup enables you to quickly get started with TA-Lib and run Python scripts
   - If you need additional Python libraries (e.g., `pandas`), you can either:
     1. Install them dynamically inside the container at runtime, for example:
        ```bash
-       docker-compose run --rm python-talib /ctr-py-venv/bin/pip install pandas
+       docker-compose run --rm python-talib /venv/bin/pip install pandas
        ```
     2. Or create your own Dockerfile extending this image and install more packages there.
 
@@ -39,7 +42,7 @@ services:
     working_dir: /usr/src/app
     volumes:
       - ./:/usr/src/app
-    command: /ctr-py-venv/bin/python script.py
+    command: /venv/bin/python script.py
 ```
 
 1. Place your `script.py` (or any other Python scripts) in the same directory as `docker-compose.yaml`.
@@ -63,23 +66,24 @@ docker run --rm \
   -v "$(pwd):/usr/src/app" \
   -w /usr/src/app \
   ghcr.io/ukewea/python-talib:ubuntu24.04-python3.12-20240915 \
-  /ctr-py-venv/bin/python script.py
+  /venv/bin/python script.py
 ```
 * `-v "$(pwd):/usr/src/app"`: Mounts your current directory so the script is accessible.
 * `-w /usr/src/app`: Sets the working directory where your script.py is located.
 
 4. Installing Additional Python Packages
-Inside the container’s virtual environment (/ctr-py-venv), you can install additional libraries like so:
+
+Inside the container’s virtual environment (/venv), you can install additional libraries like so:
 
 ```bash
-docker-compose run --rm python-talib /ctr-py-venv/bin/pip install pandas
+docker-compose run --rm python-talib /venv/bin/pip install pandas
 ```
 
 Or install them permanently in your own derived image by writing a custom Dockerfile:
 
 ```dockerfile
 FROM ghcr.io/ukewea/python-talib:ubuntu24.04-python3.12-20240915
-RUN /ctr-py-venv/bin/pip install pandas scikit-learn
+RUN /venv/bin/pip install pandas scikit-learn
 ```
 
 ## Troubleshooting
@@ -89,7 +93,7 @@ RUN /ctr-py-venv/bin/pip install pandas scikit-learn
 
 ## Example Python Script
 
-Here's a simple example (`script.py`) to demonstrate using **TA-Lib** and **Pandas** within this Docker image:
+Here's a simple example (`script.py`) to demonstrate using **TA-Lib** within this Docker image:
 
 ```python
 import random
