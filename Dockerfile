@@ -4,8 +4,8 @@ FROM ${BASE_IMAGE}
 LABEL org.opencontainers.image.authors="ukewea https://github.com/ukewea"
 LABEL org.opencontainers.image.source="https://github.com/ukewea/python-talib"
 
-ENV APT_PKG_TEMPORARY="build-essential autoconf automake autotools-dev cmake python3-dev python3-venv wget"
-ENV APT_PKG="python3 python3-pip libopenblas-dev liblapack3 libtool"
+ENV APT_PKG_TEMPORARY="build-essential autoconf automake autotools-dev cmake python3-dev python3-venv libtool libopenblas-dev wget"
+ENV APT_PKG="python3 python3-pip liblapack3"
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Make TALIB_VERSION available as an environment variable 
@@ -48,6 +48,7 @@ RUN apt-get update && apt-get upgrade -y && \
   # Create a Python virtual environment for TA-Lib
   # this change is to cater the limitation that Python 3.11+ don't allow pip to install packages system-wide by default
   python3 -m venv /venv && \
+  /venv/bin/python -m pip install --upgrade pip && \
   /venv/bin/pip install --no-cache-dir numpy TA-Lib pandas && \
   \
   # Clean up
