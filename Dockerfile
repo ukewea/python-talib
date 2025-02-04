@@ -8,7 +8,7 @@ ENV APT_PKG_TEMPORARY="build-essential autoconf automake autotools-dev cmake pyt
 ENV APT_PKG="python3 python3-pip liblapack3"
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Make TALIB_VERSION available as an environment variable 
+# Make TALIB_VERSION available as an environment variable
 ARG TALIB_VERSION=0.6.4
 ENV TALIB_VERSION=${TALIB_VERSION}
 

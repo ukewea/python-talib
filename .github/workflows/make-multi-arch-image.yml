@@ -35,7 +35,7 @@ jobs:
       images: ${{ needs.setup.outputs.image_name }}
       context: .
       platforms: linux/arm64
-      runner-labels: "['ubuntu-latest']"
+      runner-labels: "['self-hosted', 'Linux', 'ARM64']"
 
   build-linux-armv7:
     needs: setup
