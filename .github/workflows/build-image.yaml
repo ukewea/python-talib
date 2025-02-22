@@ -1,4 +1,4 @@
-name: docker-build
+name: Build Image
 
 on:
   workflow_call:
@@ -15,6 +15,10 @@ on:
         description: Passed to docker/build-push-action
         type: string
         required: true
+      runner-labels:
+        description: Runner labels
+        type: string
+        required: true
     outputs:
       digest:
         description: digest
@@ -22,12 +26,12 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.runner-labels) }}
 
     permissions:
       packages: write
 
-    timeout-minutes: 120
+    timeout-minutes: 300
 
     outputs:
       digest: ${{ steps.build-push.outputs.digest }}
@@ -59,9 +63,24 @@ jobs:
           # avoid overwriting the latest tag because metadata-action does not add a suffix to it
           flavor: latest=false
 
-      - name: Build and Push
+      - name: Build (no push yet)
+        id: build-image
         uses: docker/build-push-action@v5
+        with:
+          push: false
+          load: true
+          context: ${{ inputs.context }}
+          tags: temp-image:localtest
+          labels: ${{ steps.metadata.outputs.labels }}
+          platforms: ${{ inputs.platforms }}
+
+      - name: Smoke Test - ta-lib, numpy, pandas
+        run: |
+          docker run --rm temp-image:localtest /venv/bin/python -c "import pandas as pd; import talib; import numpy as np; print('All good!' if talib.SMA(np.array([1,2,3], dtype=float), timeperiod=2) is not None else 'Something\'s missing')"
+
+      - name: Push image
         id: build-push
+        uses: docker/build-push-action@v5
         with:
           push: true
           context: ${{ inputs.context }}
@@ -71,3 +90,7 @@ jobs:
 
       - name: Print the Image Digest
         run: echo "The image digest is ${{ steps.build-push.outputs.digest }}"
+
+      - name: Remove local test image
+        if: ${{ always() }}
+        run: docker rmi temp-image:localtest || true

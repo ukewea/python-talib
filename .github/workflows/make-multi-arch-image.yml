@@ -1,4 +1,4 @@
-name: Build and Push Image
+name: Build, Multi-Arch Image
 
 on:
   # push:
@@ -21,27 +21,30 @@ jobs:
 
   build-linux-amd64:
     needs: setup
-    uses: ./.github/workflows/reusable--docker-build.yaml
+    uses: ./.github/workflows/build-image.yaml
     with:
       images: ${{ needs.setup.outputs.image_name }}
       context: .
       platforms: linux/amd64
+      runner-labels: "['ubuntu-latest']"
 
   build-linux-arm64:
     needs: setup
-    uses: ./.github/workflows/reusable--docker-build.yaml
+    uses: ./.github/workflows/build-image.yaml
     with:
       images: ${{ needs.setup.outputs.image_name }}
       context: .
       platforms: linux/arm64
+      runner-labels: "['self-hosted', 'Linux', 'ARM64']"
 
   build-linux-armv7:
     needs: setup
-    uses: ./.github/workflows/reusable--docker-build.yaml
+    uses: ./.github/workflows/build-image.yaml
     with:
       images: ${{ needs.setup.outputs.image_name }}
       context: .
       platforms: linux/arm/v7
+      runner-labels: "['self-hosted', 'Linux', 'ARM']"
 
   build:
     needs:
