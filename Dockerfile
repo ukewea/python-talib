@@ -9,10 +9,8 @@ ENV APT_PKG="python3 python3-pip liblapack3"
 ENV DEBIAN_FRONTEND=noninteractive
 
 ARG TALIB_C_VERSION="0.6.4"
-ARG TALIB_PY_MAJOR_MIN_VERSION="0.6"
 
 ENV TALIB_C_VERSION=${TALIB_C_VERSION}
-ENV TALIB_PY_MAJOR_MIN_VERSION=${TALIB_PY_MAJOR_MIN_VERSION}
 
 ENV TA_LIB_C_DEB_URL_TEMPLATE="https://github.com/TA-Lib/ta-lib/releases/download/v${TALIB_C_VERSION}/ta-lib_${TALIB_C_VERSION}_\$ARCH.deb"
 ENV TA_LIB_C_SRC_URL="https://github.com/TA-Lib/ta-lib/releases/download/v${TALIB_C_VERSION}/ta-lib-${TALIB_C_VERSION}-src.tar.gz"
@@ -54,7 +52,13 @@ RUN apt-get update && apt-get upgrade -y && \
   python3 -m venv /venv && \
   . /venv/bin/activate && \
   pip install --no-cache-dir --upgrade pip cython && \
-  pip install --no-cache-dir TA-Lib~=${TALIB_PY_MAJOR_MIN_VERSION} pandas && \
+  if [ -n "$final_arch" ]; then \
+    pip install --no-cache-dir TA-Lib==0.6.5 pandas; \
+  else \
+    # for some reason TA-Lib 0.6.5 in armhf will fail to compile (probably due to modification related to Cython)
+    # so stick to last known-to-built version
+    pip install --no-cache-dir TA-Lib==0.6.4 pandas; \
+  fi && \
   \
   # Clean up  
   apt-get autoremove -y ${APT_PKG_TEMPORARY} && \
