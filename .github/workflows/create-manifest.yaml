@@ -1,0 +1,77 @@
+name: Create Multi-Arch Manifest
+
+on:
+  workflow_call:
+    inputs:
+      base_image:
+        description: Base Ubuntu image (e.g., ubuntu:24.04)
+        type: string
+        required: true
+      python_version:
+        description: Python version (e.g., python3.12)
+        type: string
+        required: true
+      amd64_digest:
+        description: AMD64 image digest
+        type: string
+        required: true
+      arm64_digest:
+        description: ARM64 image digest
+        type: string
+        required: true
+      armv7_digest:
+        description: ARMv7 image digest
+        type: string
+        required: true
+      single_arch_image_name:
+        description: Single arch image name
+        type: string
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      packages: write
+
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Generate the current date in YYYYMMDD format
+      - name: Get the current date
+        run: echo "CURRENT_DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
+
+      # Define the Docker image tag, removing ":" from the BASE_IMAGE
+      - name: Define Docker Image Tag
+        run: |
+          CLEANED_BASE_IMAGE="${{ inputs.base_image }}"
+          CLEANED_BASE_IMAGE="${CLEANED_BASE_IMAGE//:}"
+          echo "DOCKER_IMAGE_TAG=${CLEANED_BASE_IMAGE}-${{ inputs.python_version }}-${CURRENT_DATE}" >> $GITHUB_ENV
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=${{ env.DOCKER_IMAGE_TAG }}
+            type=raw,value=${{ inputs.python_version }},enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Push multi-architectures container image manifest
+        uses: int128/docker-manifest-create-action@v2
+        id: build
+        with:
+          index-annotations: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
+          sources: |
+            ${{ inputs.single_arch_image_name }}@${{ inputs.amd64_digest }}
+            ${{ inputs.single_arch_image_name }}@${{ inputs.arm64_digest }}
+            ${{ inputs.single_arch_image_name }}@${{ inputs.armv7_digest }}

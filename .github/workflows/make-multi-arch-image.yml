@@ -19,92 +19,96 @@ jobs:
         run: echo "image_name=ghcr.io/${{ github.repository }}_single-arch" >> $GITHUB_OUTPUT
 
 
-  build-linux-amd64:
+  # Python 3.12 builds
+  build-linux-amd64-py312:
     needs: setup
     uses: ./.github/workflows/build-image.yaml
     with:
-      images: ${{ needs.setup.outputs.image_name }}
+      images: ${{ needs.setup.outputs.image_name }}-py312
       context: .
       platforms: linux/amd64
       runner-labels: "['ubuntu-latest']"
+      base_image: "ubuntu:24.04"
 
-  build-linux-arm64:
+  build-linux-arm64-py312:
     needs: setup
     uses: ./.github/workflows/build-image.yaml
     with:
-      images: ${{ needs.setup.outputs.image_name }}
+      images: ${{ needs.setup.outputs.image_name }}-py312
       context: .
       platforms: linux/arm64
       runner-labels: "['self-hosted', 'Linux', 'ARM64']"
+      base_image: "ubuntu:24.04"
 
-  build-linux-armv7:
+  build-linux-armv7-py312:
     needs: setup
     uses: ./.github/workflows/build-image.yaml
     with:
-      images: ${{ needs.setup.outputs.image_name }}
+      images: ${{ needs.setup.outputs.image_name }}-py312
       context: .
       platforms: linux/arm/v7
       runner-labels: "['self-hosted', 'Linux', 'ARM']"
+      base_image: "ubuntu:24.04"
 
-  build:
+  # Python 3.13 builds
+  build-linux-amd64-py313:
+    needs: setup
+    uses: ./.github/workflows/build-image.yaml
+    with:
+      images: ${{ needs.setup.outputs.image_name }}-py313
+      context: .
+      platforms: linux/amd64
+      runner-labels: "['ubuntu-latest']"
+      base_image: "ubuntu:24.10"
+
+  build-linux-arm64-py313:
+    needs: setup
+    uses: ./.github/workflows/build-image.yaml
+    with:
+      images: ${{ needs.setup.outputs.image_name }}-py313
+      context: .
+      platforms: linux/arm64
+      runner-labels: "['self-hosted', 'Linux', 'ARM64']"
+      base_image: "ubuntu:24.10"
+
+  build-linux-armv7-py313:
+    needs: setup
+    uses: ./.github/workflows/build-image.yaml
+    with:
+      images: ${{ needs.setup.outputs.image_name }}-py313
+      context: .
+      platforms: linux/arm/v7
+      runner-labels: "['self-hosted', 'Linux', 'ARM']"
+      base_image: "ubuntu:24.10"
+
+  # Create multi-arch manifest for Python 3.12
+  build-py312:
     needs:
       - setup
-      - build-linux-amd64
-      - build-linux-arm64
-      - build-linux-armv7
+      - build-linux-amd64-py312
+      - build-linux-arm64-py312
+      - build-linux-armv7-py312
+    uses: ./.github/workflows/create-manifest.yaml
+    with:
+      base_image: "ubuntu:24.04"
+      python_version: "python3.12"
+      amd64_digest: ${{ needs.build-linux-amd64-py312.outputs.digest }}
+      arm64_digest: ${{ needs.build-linux-arm64-py312.outputs.digest }}
+      armv7_digest: ${{ needs.build-linux-armv7-py312.outputs.digest }}
+      single_arch_image_name: ${{ needs.setup.outputs.image_name }}-py312
 
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    permissions:
-      packages: write
-
-    steps:
-      - name: Print the Image Digest
-        run: echo "The amd64 image digest is ${{ needs.build-linux-amd64.outputs.digest }}"
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # Define the base image variable
-      - name: Define BASE_IMAGE
-        run: echo "BASE_IMAGE=ubuntu:24.04" >> $GITHUB_ENV
-
-      # Define the Python version variable
-      - name: Define PYTHON_VERSION
-        run: echo "PYTHON_VERSION=python3.12" >> $GITHUB_ENV
-
-      # Generate the current date in YYYYMMDD format
-      - name: Get the current date
-        run: echo "CURRENT_DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
-
-      # Define the Docker image tag, removing ":" from the BASE_IMAGE
-      - name: Define Docker Image Tag
-        run: |
-          CLEANED_BASE_IMAGE="${BASE_IMAGE//:}"
-          echo "DOCKER_IMAGE_TAG=${CLEANED_BASE_IMAGE}-${PYTHON_VERSION}-${CURRENT_DATE}" >> $GITHUB_ENV
-
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            ghcr.io/${{ github.repository }}
-          tags: |
-            type=raw,value=${{ env.DOCKER_IMAGE_TAG }}
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-
-      - name: Push multi-architectures container image manifest
-        uses: int128/docker-manifest-create-action@v2
-        id: build
-        with:
-          index-annotations: ${{ steps.meta.outputs.labels }}
-          tags: ${{ steps.meta.outputs.tags }}
-          sources: |
-            ${{ needs.setup.outputs.image_name }}@${{ needs.build-linux-amd64.outputs.digest }}
-            ${{ needs.setup.outputs.image_name }}@${{ needs.build-linux-arm64.outputs.digest }}
-            ${{ needs.setup.outputs.image_name }}@${{ needs.build-linux-armv7.outputs.digest }}
+  # Create multi-arch manifest for Python 3.13
+  build-py313:
+    needs:
+      - setup
+      - build-linux-amd64-py313
+      - build-linux-arm64-py313
+      - build-linux-armv7-py313
+    uses: ./.github/workflows/create-manifest.yaml
+    with:
+      base_image: "ubuntu:24.10"
+      python_version: "python3.13"
+      amd64_digest: ${{ needs.build-linux-amd64-py313.outputs.digest }}
+      arm64_digest: ${{ needs.build-linux-arm64-py313.outputs.digest }}
+      armv7_digest: ${{ needs.build-linux-armv7-py313.outputs.digest }}
+      single_arch_image_name: ${{ needs.setup.outputs.image_name }}-py313

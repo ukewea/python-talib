@@ -19,6 +19,11 @@ on:
         description: Runner labels
         type: string
         required: true
+      base_image:
+        description: Base image for Docker build
+        type: string
+        required: false
+        default: "ubuntu:24.04"
     outputs:
       digest:
         description: digest
@@ -73,6 +78,8 @@ jobs:
           tags: temp-image:localtest
           labels: ${{ steps.metadata.outputs.labels }}
           platforms: ${{ inputs.platforms }}
+          build-args: |
+            BASE_IMAGE=${{ inputs.base_image }}
 
       - name: Smoke Test - ta-lib, numpy, pandas
         run: |
@@ -87,6 +94,8 @@ jobs:
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
           platforms: ${{ inputs.platforms }}
+          build-args: |
+            BASE_IMAGE=${{ inputs.base_image }}
 
       - name: Print the Image Digest
         run: echo "The image digest is ${{ steps.build-push.outputs.digest }}"
