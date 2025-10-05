@@ -59,7 +59,7 @@ jobs:
       context: .
       platforms: linux/amd64
       runner-labels: "['ubuntu-latest']"
-      base_image: "ubuntu:24.10"
+      base_image: "ubuntu:25.04"
 
   build-linux-arm64-py313:
     needs: setup
@@ -69,7 +69,7 @@ jobs:
       context: .
       platforms: linux/arm64
       runner-labels: "['self-hosted', 'Linux', 'ARM64']"
-      base_image: "ubuntu:24.10"
+      base_image: "ubuntu:25.04"
 
   build-linux-armv7-py313:
     needs: setup
@@ -79,7 +79,7 @@ jobs:
       context: .
       platforms: linux/arm/v7
       runner-labels: "['self-hosted', 'Linux', 'ARM']"
-      base_image: "ubuntu:24.10"
+      base_image: "ubuntu:25.04"
 
   # Create multi-arch manifest for Python 3.12
   build-py312:
