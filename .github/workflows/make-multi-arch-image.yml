@@ -93,6 +93,43 @@ jobs:
       expected_python: "3.13"
       docker_host: ${{ vars.ARMHF_DOCKER_HOST }}
 
+  # Python 3.14 builds (Ubuntu 26.04 default python3)
+  build-linux-amd64-py314:
+    needs: setup
+    uses: ./.github/workflows/build-image.yaml
+    with:
+      images: ${{ needs.setup.outputs.image_name }}-py314
+      context: .
+      platforms: linux/amd64
+      runner-labels: "['ubuntu-latest']"
+      base_image: "ubuntu:26.04"
+      expected_python: "3.14"
+
+  build-linux-arm64-py314:
+    needs: setup
+    uses: ./.github/workflows/build-image.yaml
+    with:
+      images: ${{ needs.setup.outputs.image_name }}-py314
+      context: .
+      platforms: linux/arm64
+      runner-labels: "['self-hosted', 'Linux', 'ARM64']"
+      base_image: "ubuntu:26.04"
+      expected_python: "3.14"
+
+  # Orchestration on ARM64 self-hosted runner; native arm/v7 build via remote DOCKER_HOST.
+  # Set repository variable ARMHF_DOCKER_HOST in GitHub settings — do not commit it.
+  build-linux-armv7-py314:
+    needs: setup
+    uses: ./.github/workflows/build-image.yaml
+    with:
+      images: ${{ needs.setup.outputs.image_name }}-py314
+      context: .
+      platforms: linux/arm/v7
+      runner-labels: "['self-hosted', 'Linux', 'ARM64']"
+      base_image: "ubuntu:26.04"
+      expected_python: "3.14"
+      docker_host: ${{ vars.ARMHF_DOCKER_HOST }}
+
   # Create multi-arch manifest for Python 3.12
   build-py312:
     needs:
@@ -124,3 +161,19 @@ jobs:
       arm64_digest: ${{ needs.build-linux-arm64-py313.outputs.digest }}
       armv7_digest: ${{ needs.build-linux-armv7-py313.outputs.digest }}
       single_arch_image_name: ${{ needs.setup.outputs.image_name }}-py313
+
+  # Create multi-arch manifest for Python 3.14
+  build-py314:
+    needs:
+      - setup
+      - build-linux-amd64-py314
+      - build-linux-arm64-py314
+      - build-linux-armv7-py314
+    uses: ./.github/workflows/create-manifest.yaml
+    with:
+      base_image: "ubuntu:26.04"
+      python_version: "python3.14"
+      amd64_digest: ${{ needs.build-linux-amd64-py314.outputs.digest }}
+      arm64_digest: ${{ needs.build-linux-arm64-py314.outputs.digest }}
+      armv7_digest: ${{ needs.build-linux-armv7-py314.outputs.digest }}
+      single_arch_image_name: ${{ needs.setup.outputs.image_name }}-py314

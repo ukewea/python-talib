@@ -48,7 +48,7 @@ Overrides convenience. Applies to edits, commits, PRs, issues, comments, and log
 - **Orchestration:** explicit jobs per Python × arch (not `strategy.matrix`).
 - **Triggers:** schedule every 2 months on the 15th; `workflow_dispatch`; push disabled (commented).
 - **Runners (abstract):** amd64 = GitHub-hosted `ubuntu-latest`; arm64/armv7 jobs use `['self-hosted', 'Linux', 'ARM64']`; armv7 Docker via `vars.ARMHF_DOCKER_HOST` (see armhf doc).
-- **Python lines:** multiple product lines (e.g. py312 / py313 job prefixes)—each has its own `base_image` + `expected_python` in the YAML. Discover current values there.
+- **Python lines:** multiple product lines (job prefixes like `py312` / `py313` / `py314`)—each has its own `base_image` + `expected_python` in the YAML. Discover current values there.
 
 ## Commands (patterns — fill values from YAML)
 
