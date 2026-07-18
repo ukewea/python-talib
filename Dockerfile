@@ -52,11 +52,16 @@ RUN apt-get update && apt-get upgrade -y && \
   python3 -m venv /venv && \
   . /venv/bin/activate && \
   pip install --no-cache-dir --upgrade pip cython && \
-  if [ -n "$final_arch" ]; then \
+  # Python TA-Lib package pins (C library version is TALIB_C_VERSION above):
+  # - 3.14+: need TA-Lib>=0.7 (0.6.x fails Cython build on 3.14)
+  # - deb arches (amd64/arm64): 0.6.5 on older Python
+  # - source path (e.g. armhf): 0.6.4 on older Python (0.6.5 failed there historically)
+  py_mm="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" && \
+  if python3 -c "import sys; raise SystemExit(0 if sys.version_info[:2] >= (3, 14) else 1)"; then \
+    pip install --no-cache-dir 'TA-Lib>=0.7.1' pandas; \
+  elif [ -n "$final_arch" ]; then \
     pip install --no-cache-dir TA-Lib==0.6.5 pandas; \
   else \
-    # for some reason TA-Lib 0.6.5 in armhf will fail to compile (probably due to modification related to Cython)
-    # so stick to last known-to-built version
     pip install --no-cache-dir TA-Lib==0.6.4 pandas; \
   fi && \
   \

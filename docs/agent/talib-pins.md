@@ -7,7 +7,7 @@ Source of truth for exact values: `Dockerfile`. This page explains **what** is p
 | Component | Where set | amd64 / arm64 (`.deb` path) | Other arches (source path, e.g. armhf) |
 |-----------|-----------|-----------------------------|----------------------------------------|
 | **C library** | `ARG TALIB_C_VERSION` | same for all arches | same |
-| **Python package `TA-Lib`** | hardcoded in `RUN` `pip install` | one `TA-Lib==…` pin | often a different `TA-Lib==…` pin if newer fails to build |
+| **Python package `TA-Lib`** | `RUN` `pip install` (version depends on **Python major.minor** and arch path) | older Py: pin; **3.14+**: `TA-Lib>=0.7.1` | older Py: often older pin; **3.14+**: same newer floor |
 | **pandas** | same `pip install` line | typically unpinned minor | same |
 | **numpy** | transitive | not pinned directly | same |
 
