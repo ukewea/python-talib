@@ -40,6 +40,8 @@ jobs:
       runner-labels: "['self-hosted', 'Linux', 'ARM64']"
       base_image: "ubuntu:24.04"
 
+  # Orchestration on ARM64 self-hosted runner; native arm/v7 build via remote DOCKER_HOST.
+  # Set repository variable ARMHF_DOCKER_HOST (e.g. ssh://user@host) in GitHub settings — do not commit it.
   build-linux-armv7-py312:
     needs: setup
     uses: ./.github/workflows/build-image.yaml
@@ -47,8 +49,9 @@ jobs:
       images: ${{ needs.setup.outputs.image_name }}-py312
       context: .
       platforms: linux/arm/v7
-      runner-labels: "['self-hosted', 'Linux', 'ARM']"
+      runner-labels: "['self-hosted', 'Linux', 'ARM64']"
       base_image: "ubuntu:24.04"
+      docker_host: ${{ vars.ARMHF_DOCKER_HOST }}
 
   # Python 3.13 builds
   build-linux-amd64-py313:
@@ -71,6 +74,8 @@ jobs:
       runner-labels: "['self-hosted', 'Linux', 'ARM64']"
       base_image: "ubuntu:25.04"
 
+  # Orchestration on ARM64 self-hosted runner; native arm/v7 build via remote DOCKER_HOST.
+  # Set repository variable ARMHF_DOCKER_HOST in GitHub settings — do not commit it.
   build-linux-armv7-py313:
     needs: setup
     uses: ./.github/workflows/build-image.yaml
@@ -78,8 +83,9 @@ jobs:
       images: ${{ needs.setup.outputs.image_name }}-py313
       context: .
       platforms: linux/arm/v7
-      runner-labels: "['self-hosted', 'Linux', 'ARM']"
+      runner-labels: "['self-hosted', 'Linux', 'ARM64']"
       base_image: "ubuntu:25.04"
+      docker_host: ${{ vars.ARMHF_DOCKER_HOST }}
 
   # Create multi-arch manifest for Python 3.12
   build-py312:

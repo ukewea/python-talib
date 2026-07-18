@@ -28,6 +28,7 @@ This repository creates multi-architecture Docker images with:
 #### Reusable Workflows:
 1. **`build-image.yaml`**: Builds single-architecture images
    - Accepts `base_image` parameter for Ubuntu version selection
+   - Optional `docker_host` input (`DOCKER_HOST`) for a remote Docker daemon; leave empty for the runner’s local daemon
    - Performs smoke tests with TA-Lib, NumPy, and Pandas
    - Pushes to GitHub Container Registry
 
@@ -71,9 +72,18 @@ docker build --build-arg BASE_IMAGE=ubuntu:24.10 -t python-talib:py313 .
 - **Virtual Environment**: All packages installed in `/venv` to comply with modern Python packaging standards
 
 ### Multi-Architecture Support
-- **AMD64**: Runs on GitHub-hosted runners
-- **ARM64**: Requires self-hosted runners with `['self-hosted', 'Linux', 'ARM64']` labels
-- **ARMv7**: Requires self-hosted runners with `['self-hosted', 'Linux', 'ARM']` labels
+- **AMD64**: GitHub-hosted runners (`ubuntu-latest`)
+- **ARM64**: Self-hosted runner labels `['self-hosted', 'Linux', 'ARM64']`; Docker builds on that host’s local daemon
+- **ARMv7 (armhf)**: Same ARM64 self-hosted runner for job orchestration (checkout / JS actions). Image build, smoke test, and push use a **remote** Docker daemon via `DOCKER_HOST`, supplied only by the repository variable **`ARMHF_DOCKER_HOST`** (set under GitHub → Settings → Secrets and variables → Actions → Variables). Do not commit hostnames, usernames, or SSH endpoints. Avoids QEMU and survives GitHub’s ARM32 runner EOL (Node 20 removal, ~2026-09-16).
+
+### Remote armhf build topology
+```
+ARM64 self-hosted runner  --DOCKER_HOST (from vars.ARMHF_DOCKER_HOST)-->  native armhf Docker host
+  JS actions / checkout / buildx orchestration                             linux/arm/v7 build + push
+```
+- Configure passwordless SSH from the ARM64 runner to the armhf Docker host (key-only, BatchMode); keep that config on the runner, not in this repo.
+- Set `ARMHF_DOCKER_HOST` to a `ssh://…` URL that resolves via the runner’s SSH config.
+- arm64 and armv7 jobs share one ARM64 runner and therefore serialize.
 
 ## Common Tasks
 
