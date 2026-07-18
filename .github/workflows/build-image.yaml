@@ -24,6 +24,10 @@ on:
         type: string
         required: false
         default: "ubuntu:24.04"
+      expected_python:
+        description: Expected Python major.minor in the image (e.g. "3.12", "3.13"). Checked in smoke test.
+        type: string
+        required: true
       docker_host:
         description: Optional DOCKER_HOST (ssh://… to a remote daemon). Empty = local daemon on the runner. Prefer a repo variable, never commit real hosts.
         type: string
@@ -112,9 +116,24 @@ jobs:
           build-args: |
             BASE_IMAGE=${{ inputs.base_image }}
 
-      - name: Smoke Test - ta-lib, numpy, pandas
+      - name: Smoke Test - Python version, ta-lib, numpy, pandas
+        env:
+          EXPECTED_PYTHON: ${{ inputs.expected_python }}
         run: |
-          docker run --rm temp-image:localtest /venv/bin/python -c "import pandas as pd; import talib; import numpy as np; print('All good!' if talib.SMA(np.array([1,2,3], dtype=float), timeperiod=2) is not None else 'Something\'s missing')"
+          docker run --rm -e EXPECTED_PYTHON="${EXPECTED_PYTHON}" temp-image:localtest /venv/bin/python -c "
+          import os, sys
+          print('Python:', sys.version)
+          majmin = f'{sys.version_info.major}.{sys.version_info.minor}'
+          expected = os.environ['EXPECTED_PYTHON'].strip()
+          assert majmin == expected, f'expected Python {expected}, got {majmin}'
+          print(f'Python version OK: {majmin}')
+          import pandas as pd
+          import talib
+          import numpy as np
+          ok = talib.SMA(np.array([1, 2, 3], dtype=float), timeperiod=2) is not None
+          print('All good!' if ok else \"Something's missing\")
+          raise SystemExit(0 if ok else 1)
+          "
 
       - name: Push image
         id: build-push

@@ -29,6 +29,7 @@ jobs:
       platforms: linux/amd64
       runner-labels: "['ubuntu-latest']"
       base_image: "ubuntu:24.04"
+      expected_python: "3.12"
 
   build-linux-arm64-py312:
     needs: setup
@@ -39,6 +40,7 @@ jobs:
       platforms: linux/arm64
       runner-labels: "['self-hosted', 'Linux', 'ARM64']"
       base_image: "ubuntu:24.04"
+      expected_python: "3.12"
 
   # Orchestration on ARM64 self-hosted runner; native arm/v7 build via remote DOCKER_HOST.
   # Set repository variable ARMHF_DOCKER_HOST (e.g. ssh://user@host) in GitHub settings — do not commit it.
@@ -51,6 +53,7 @@ jobs:
       platforms: linux/arm/v7
       runner-labels: "['self-hosted', 'Linux', 'ARM64']"
       base_image: "ubuntu:24.04"
+      expected_python: "3.12"
       docker_host: ${{ vars.ARMHF_DOCKER_HOST }}
 
   # Python 3.13 builds
@@ -62,7 +65,8 @@ jobs:
       context: .
       platforms: linux/amd64
       runner-labels: "['ubuntu-latest']"
-      base_image: "ubuntu:25.04"
+      base_image: "ubuntu:25.10"
+      expected_python: "3.13"
 
   build-linux-arm64-py313:
     needs: setup
@@ -72,7 +76,8 @@ jobs:
       context: .
       platforms: linux/arm64
       runner-labels: "['self-hosted', 'Linux', 'ARM64']"
-      base_image: "ubuntu:25.04"
+      base_image: "ubuntu:25.10"
+      expected_python: "3.13"
 
   # Orchestration on ARM64 self-hosted runner; native arm/v7 build via remote DOCKER_HOST.
   # Set repository variable ARMHF_DOCKER_HOST in GitHub settings — do not commit it.
@@ -84,7 +89,8 @@ jobs:
       context: .
       platforms: linux/arm/v7
       runner-labels: "['self-hosted', 'Linux', 'ARM64']"
-      base_image: "ubuntu:25.04"
+      base_image: "ubuntu:25.10"
+      expected_python: "3.13"
       docker_host: ${{ vars.ARMHF_DOCKER_HOST }}
 
   # Create multi-arch manifest for Python 3.12
@@ -112,7 +118,7 @@ jobs:
       - build-linux-armv7-py313
     uses: ./.github/workflows/create-manifest.yaml
     with:
-      base_image: "ubuntu:24.10"
+      base_image: "ubuntu:25.10"
       python_version: "python3.13"
       amd64_digest: ${{ needs.build-linux-amd64-py313.outputs.digest }}
       arm64_digest: ${{ needs.build-linux-arm64-py313.outputs.digest }}

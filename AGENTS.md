@@ -1,118 +1,105 @@
 # AGENTS.md
 
-This document provides guidance for AI assistants working with the python-talib repository, which builds Docker images containing Python runtime, TA-Lib, NumPy, and Pandas for technical analysis applications.
+Agent map for **python-talib**: multi-arch Docker images (Python + TA-Lib + NumPy + Pandas).  
+This file is a **table of contents**, not an encyclopedia ([harness engineering](https://openai.com/index/harness-engineering/): short map, progressive disclosure, repo as system of record).
 
-## Repository Overview
+**Out of scope:** this is an **image packaging** repo, not a Python library API product.
 
-This repository creates multi-architecture Docker images with:
-- **Base Images**: Ubuntu 24.04 (Python 3.12) and Ubuntu 24.10 (Python 3.13)
-- **Core Libraries**: TA-Lib (Technical Analysis Library), NumPy, Pandas
-- **Architectures**: AMD64, ARM64, ARMv7
-- **Python Environment**: Virtual environment at `/venv` to comply with PEP 668
+**Living doc:** change bases / platforms / pins / smoke / runner contracts → update this map and linked `docs/agent/*` in the **same PR** only if the *process* changed—not to restate version numbers that belong in YAML/Dockerfile.
 
-## Build System Architecture
+## Source of truth
 
-### Dockerfile Structure
-- Uses `ARG BASE_IMAGE=ubuntu:24.04` for flexible base image selection
-- Downloads pre-compiled TA-Lib `.deb` packages for supported architectures
-- Falls back to source compilation for unsupported architectures
-- Creates Python virtual environment to avoid system-wide package installation conflicts
+| Topic | Read first (do not invent from memory or this map) |
+|-------|-----------------------------------------------------|
+| Build recipe (`/venv`, TA-Lib install) | `Dockerfile` |
+| **Which Ubuntu base, `expected_python`, platform, runner** each job uses | **`.github/workflows/make-multi-arch-image.yml`** |
+| Build / smoke / push steps | `.github/workflows/build-image.yaml` |
+| Multi-arch manifests + tags | `.github/workflows/create-manifest.yaml` |
+| Deeper agent docs | `docs/agent/` (index below) |
 
-### GitHub Actions Workflows
+**Version policy for markdown:** do **not** hardcode Ubuntu tags (e.g. `ubuntu:YY.MM`) or Python major.minor (e.g. `3.xx`) in `AGENTS.md` / `docs/agent/*`. Open `make-multi-arch-image.yml` for each Python line’s `base_image` and `expected_python`, and keep those fields consistent across the three arch jobs + matching manifest job. Dockerfile `ARG BASE_IMAGE` default is only the local-default; CI overrides it per job.
 
-#### Main Workflow: `make-multi-arch-image.yml`
-- **Purpose**: Orchestrates building multi-architecture images for both Python versions
-- **Strategy**: Matrix builds for each Python version and architecture combination
-- **Output**: Two multi-arch manifests with tags `python3.12` and `python3.13`
+If narrative and YAML disagree, **YAML/Dockerfile win** — then fix the docs (without reintroducing version tables here).
 
-#### Reusable Workflows:
-1. **`build-image.yaml`**: Builds single-architecture images
-   - Accepts `base_image` parameter for Ubuntu version selection
-   - Optional `docker_host` input (`DOCKER_HOST`) for a remote Docker daemon; leave empty for the runner’s local daemon
-   - Performs smoke tests with TA-Lib, NumPy, and Pandas
-   - Pushes to GitHub Container Registry
+## Constitution (mandatory)
 
-2. **`create-manifest.yaml`**: Creates multi-architecture manifests
-   - Combines single-arch images into unified multi-arch images
-   - Generates date-based and version-based tags
+Overrides convenience. Applies to edits, commits, PRs, issues, comments, and log helpers.
 
-## Development Guidelines
+1. **No concrete infrastructure identifiers** in git or public text: hostnames, FQDNs, SSH aliases, IPs, VPN endpoints, lab usernames/paths, inventory names that map 1:1 to machines.
+2. **Abstract roles OK:** e.g. “ARM64 self-hosted runner”, “armhf Docker host”, “orchestration → remote Docker”.
+3. **Ask the human** before writing anything that might include (1).
+4. **Config out of git:** machine endpoints live in Actions variables/secrets or runner `~/.ssh/config`. Document **formats**, never live values (e.g. `ARMHF_DOCKER_HOST`).
+5. **Redact logs:** do not echo host URLs; “is set” is enough.
+6. **History:** leaked secrets/hosts → fix tree **and** plan history rewrite with human approval.
 
-### Testing Commands
+## Map → deeper docs
+
+| Need | Go to |
+|------|--------|
+| TA-Lib C vs pip pins; how to bump | [`docs/agent/talib-pins.md`](docs/agent/talib-pins.md) |
+| armv7 remote Docker contract, variable format, failure modes | [`docs/agent/armhf-remote-docker.md`](docs/agent/armhf-remote-docker.md) |
+| What to verify before finishing | [`docs/agent/definition-of-done.md`](docs/agent/definition-of-done.md) |
+| Human pull/run/compose | `README.md` |
+
+## Repository snapshot (stable facts only)
+
+- **Image contents:** Python runtime, TA-Lib, NumPy, Pandas under `/venv` (PEP 668).
+- **Architectures:** `linux/amd64`, `linux/arm64`, `linux/arm/v7` (see workflow `platforms`).
+- **Orchestration:** explicit jobs per Python × arch (not `strategy.matrix`).
+- **Triggers:** schedule every 2 months on the 15th; `workflow_dispatch`; push disabled (commented).
+- **Runners (abstract):** amd64 = GitHub-hosted `ubuntu-latest`; arm64/armv7 jobs use `['self-hosted', 'Linux', 'ARM64']`; armv7 Docker via `vars.ARMHF_DOCKER_HOST` (see armhf doc).
+- **Python lines:** multiple product lines (e.g. py312 / py313 job prefixes)—each has its own `base_image` + `expected_python` in the YAML. Discover current values there.
+
+## Commands (patterns — fill values from YAML)
+
 ```bash
-# Test TA-Lib functionality
-docker run --rm <image> /venv/bin/python -c "import pandas as pd; import talib; import numpy as np; print('All good!' if talib.SMA(np.array([1,2,3], dtype=float), timeperiod=2) is not None else 'Something\'s missing')"
+# 1) Read make-multi-arch-image.yml for the line you care about:
+#    base_image: "ubuntu:…"
+#    expected_python: "…"
+#
+# 2) Local build
+docker build --build-arg BASE_IMAGE=<base_image from YAML> -t python-talib:<line> .
 
-# Interactive testing
-docker run --rm -it <image> /venv/bin/python
+# 3) Smoke (match CI contract in build-image.yaml)
+docker run --rm -e EXPECTED_PYTHON=<expected_python from YAML> python-talib:<line> /venv/bin/python -c "
+import os, sys
+majmin = f'{sys.version_info.major}.{sys.version_info.minor}'
+assert majmin == os.environ['EXPECTED_PYTHON'], (majmin, os.environ['EXPECTED_PYTHON'])
+import pandas as pd, talib, numpy as np
+assert talib.SMA(np.array([1.,2.,3.]), timeperiod=2) is not None
+print('All good!', sys.version.split()[0])
+"
+
+docker run --rm -it python-talib:<line> /venv/bin/python
 ```
 
-### Build Commands
-```bash
-# Build specific Python version
-docker build --build-arg BASE_IMAGE=ubuntu:24.04 -t python-talib:py312 .
-docker build --build-arg BASE_IMAGE=ubuntu:24.10 -t python-talib:py313 .
+CI: every `build-image.yaml` call must pass `expected_python` consistent with that job’s base image (asserted in smoke).
+
+## Workflow graph
+
+```
+make-multi-arch-image.yml
+  ├── build-image.yaml   (per arch × Python line; smoke; push single-arch)
+  └── create-manifest.yaml  (multi-arch tags after digests exist)
 ```
 
-### Workflow Triggers
-- **Schedule**: Runs every 2 months on the 15th
-- **Manual**: `workflow_dispatch` for on-demand builds
-- **Push**: Currently disabled (commented out)
+## Common tasks (short)
 
-## Architecture Considerations
+**Add a Python line:** three arch jobs (identical `base_image` + `expected_python`) + matching manifest `base_image` + update this map only if process changed. Values live in YAML. See definition-of-done.
 
-### TA-Lib Installation Strategy
-1. **Pre-compiled Binaries**: Downloads `.deb` packages for AMD64/ARM64
-2. **Source Compilation**: Falls back for unsupported architectures (e.g., ARMv7)
-3. **Version Pinning**: ARMv7 builds use TA-Lib 0.6.4 due to compilation issues with 0.6.5
+**Bump TA-Lib:** follow [`docs/agent/talib-pins.md`](docs/agent/talib-pins.md) (C ARG **and** both pip pins in `Dockerfile`).
 
-### Python Version Support
-- **Python 3.12**: Uses Ubuntu 24.04 LTS base
-- **Python 3.13**: Uses Ubuntu 24.10 base
-- **Virtual Environment**: All packages installed in `/venv` to comply with modern Python packaging standards
+**Change platforms/runners:** edit explicit jobs in `make-multi-arch-image.yml`; keep armv7 on ARM64 labels + `docker_host` var; update docs only for process/contract changes.
 
-### Multi-Architecture Support
-- **AMD64**: GitHub-hosted runners (`ubuntu-latest`)
-- **ARM64**: Self-hosted runner labels `['self-hosted', 'Linux', 'ARM64']`; Docker builds on that host’s local daemon
-- **ARMv7 (armhf)**: Same ARM64 self-hosted runner for job orchestration (checkout / JS actions). Image build, smoke test, and push use a **remote** Docker daemon via `DOCKER_HOST`, supplied only by the repository variable **`ARMHF_DOCKER_HOST`** (set under GitHub → Settings → Secrets and variables → Actions → Variables). Do not commit hostnames, usernames, or SSH endpoints. Avoids QEMU and survives GitHub’s ARM32 runner EOL (Node 20 removal, ~2026-09-16).
+## PR / commit rules
 
-### Remote armhf build topology
-```
-ARM64 self-hosted runner  --DOCKER_HOST (from vars.ARMHF_DOCKER_HOST)-->  native armhf Docker host
-  JS actions / checkout / buildx orchestration                             linux/arm/v7 build + push
-```
-- Configure passwordless SSH from the ARM64 runner to the armhf Docker host (key-only, BatchMode); keep that config on the runner, not in this repo.
-- Set `ARMHF_DOCKER_HOST` to a `ssh://…` URL that resolves via the runner’s SSH config.
-- arm64 and armv7 jobs share one ARM64 runner and therefore serialize.
+- Never commit real `ssh://…` values, hosts, or usernames.
+- Constitution applies to commit messages and PR bodies.
+- Prefer: local `docker build` + smoke using **YAML-sourced** `BASE_IMAGE` / `EXPECTED_PYTHON`; multi-arch needs CI/self-hosted.
+- Do not reintroduce Ubuntu/Python version tables into markdown “for convenience.”
+- Do not claim multi-arch green without CI (or explicit human acknowledgment).
 
-## Common Tasks
+## Security (image contents)
 
-### Adding New Python Version
-1. Add new build jobs in `make-multi-arch-image.yml` for each architecture
-2. Create corresponding manifest creation job
-3. Update Ubuntu base image as needed
-4. Test compatibility with TA-Lib compilation
-
-### Updating TA-Lib Version
-1. Update `TALIB_C_VERSION` ARG in Dockerfile
-2. Verify pre-compiled `.deb` availability for new version
-3. Test compilation on all architectures, especially ARMv7
-
-### Modifying Build Matrix
-1. Update architecture-specific build jobs
-2. Ensure self-hosted runner labels match available infrastructure
-3. Update manifest creation to include all architecture digests
-
-## Key Dependencies
-
-- **TA-Lib C Library**: Core technical analysis functionality
-- **GitHub Container Registry**: Image storage and distribution
-- **Docker Buildx**: Multi-architecture build support
-- **Self-hosted Runners**: Required for ARM architectures
-
-## Security Considerations
-
-- Images use official Ubuntu base images
-- TA-Lib binaries downloaded from official GitHub releases
-- Virtual environment isolation prevents system-wide package conflicts
-- Regular automated builds ensure security updates from base images
+- Official Ubuntu bases; TA-Lib from upstream GitHub releases; `/venv` isolation.
+- Infra/agent safety: **Constitution** above.
