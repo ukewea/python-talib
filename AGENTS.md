@@ -60,27 +60,23 @@ Overrides convenience. Applies to edits, commits, PRs, issues, comments, and log
 # 2) Local build
 docker build --build-arg BASE_IMAGE=<base_image from YAML> -t python-talib:<line> .
 
-# 3) Smoke (match CI contract in build-image.yaml)
-docker run --rm -e EXPECTED_PYTHON=<expected_python from YAML> python-talib:<line> /venv/bin/python -c "
-import os, sys
-majmin = f'{sys.version_info.major}.{sys.version_info.minor}'
-assert majmin == os.environ['EXPECTED_PYTHON'], (majmin, os.environ['EXPECTED_PYTHON'])
-import pandas as pd, talib, numpy as np
-assert talib.SMA(np.array([1.,2.,3.]), timeperiod=2) is not None
-print('All good!', sys.version.split()[0])
-"
+# 3) Smoke (match CI: scripts/smoke_test.py via stdin — works with remote DOCKER_HOST)
+docker run --rm -i -e EXPECTED_PYTHON=<expected_python from YAML> python-talib:<line> \
+  /venv/bin/python - < scripts/smoke_test.py
 
 docker run --rm -it python-talib:<line> /venv/bin/python
 ```
 
-CI: every `build-image.yaml` call must pass `expected_python` consistent with that job’s base image (asserted in smoke).
+CI: every `build-image.yaml` call must pass `expected_python` consistent with that job’s base image.
+Smoke asserts Python major.minor, SMA, and ACCBANDS / AVGDEV / IMI usability.
 
 ## Workflow graph
 
 ```
-make-multi-arch-image.yml
-  ├── build-image.yaml   (per arch × Python line; smoke; push single-arch)
-  └── create-manifest.yaml  (multi-arch tags after digests exist)
+make-multi-arch-image.yml   (full matrix: py312/313/314 × arches + manifests)
+verify-py314.yml            (manual: py314 only — fast iteration; optional arches/manifest)
+  ├── build-image.yaml      (per arch; smoke via scripts/smoke_test.py; push single-arch)
+  └── create-manifest.yaml  (multi-arch tags after digests exist; optional on verify-py314)
 ```
 
 ## Common tasks (short)

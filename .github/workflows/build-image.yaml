@@ -123,24 +123,15 @@ jobs:
           build-args: |
             BASE_IMAGE=${{ inputs.base_image }}
 
-      - name: Smoke Test - Python version, ta-lib, numpy, pandas
+      # Full smoke contract: Python version, SMA, ACCBANDS/AVGDEV/IMI.
+      # Feed script on stdin (works with remote DOCKER_HOST; no volume mount).
+      - name: Smoke Test - Python, talib, ACCBANDS/AVGDEV/IMI
         env:
           EXPECTED_PYTHON: ${{ inputs.expected_python }}
         run: |
-          docker run --rm -e EXPECTED_PYTHON="${EXPECTED_PYTHON}" temp-image:localtest /venv/bin/python -c "
-          import os, sys
-          print('Python:', sys.version)
-          majmin = f'{sys.version_info.major}.{sys.version_info.minor}'
-          expected = os.environ['EXPECTED_PYTHON'].strip()
-          assert majmin == expected, f'expected Python {expected}, got {majmin}'
-          print(f'Python version OK: {majmin}')
-          import pandas as pd
-          import talib
-          import numpy as np
-          ok = talib.SMA(np.array([1, 2, 3], dtype=float), timeperiod=2) is not None
-          print('All good!' if ok else \"Something's missing\")
-          raise SystemExit(0 if ok else 1)
-          "
+          set -euo pipefail
+          docker run --rm -i -e EXPECTED_PYTHON="${EXPECTED_PYTHON}" \
+            temp-image:localtest /venv/bin/python - < scripts/smoke_test.py
 
       # Fresh login immediately before push (long builds + shared remote Docker auth races).
       - name: Login to GitHub Container Registry

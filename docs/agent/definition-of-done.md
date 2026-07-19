@@ -19,7 +19,7 @@ After changing code in this repository, validate as much as the change type allo
 
 1. For each Python line: all three arch jobs share the same `base_image` and `expected_python` (values only in YAML).
 2. Matching manifest job uses the **same** `base_image` (tag naming + build must not drift).
-3. Smoke still asserts Python major.minor (from `expected_python` input) then TA-Lib/numpy/pandas.
+3. Smoke still runs `scripts/smoke_test.py` (Python major.minor from `expected_python`, SMA, ACCBANDS/AVGDEV/IMI).
 4. Do not paste the new Ubuntu/Python numbers into markdown tables “for convenience.”
 
 ## Docs-only change
