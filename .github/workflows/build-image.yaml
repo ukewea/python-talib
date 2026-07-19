@@ -33,6 +33,11 @@ on:
         type: string
         required: false
         default: ""
+      name:
+        description: Job display name in the Actions UI (e.g. "build amd64"). Job id stays "build" for outputs.
+        type: string
+        required: false
+        default: build
     outputs:
       digest:
         description: digest
@@ -40,6 +45,7 @@ on:
 
 jobs:
   build:
+    name: ${{ inputs.name }}
     runs-on: ${{ fromJson(inputs.runner-labels) }}
 
     permissions:

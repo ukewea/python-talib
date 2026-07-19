@@ -30,6 +30,7 @@ on:
 
 jobs:
   build:
+    name: create multi-arch manifest
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
