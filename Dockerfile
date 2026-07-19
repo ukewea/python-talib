@@ -8,9 +8,8 @@ ENV APT_PKG_TEMPORARY="build-essential autoconf automake autotools-dev cmake pyt
 ENV APT_PKG="python3 python3-pip liblapack3"
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Optional override: if empty, selected from Python version inside RUN.
-# Python >= 3.14 → C 0.7.1 + pip TA-Lib>=0.7.1; older → C 0.6.4 + pip 0.6.x
-ARG TALIB_C_VERSION=""
+# TA-Lib C library version (paired with pip TA-Lib>=0.7.1 below). Override only to experiment/rollback.
+ARG TALIB_C_VERSION="0.7.1"
 
 RUN apt-get update && apt-get upgrade -y && \
   apt-get install -y ${APT_PKG_TEMPORARY} ${APT_PKG} && \
@@ -23,14 +22,8 @@ RUN apt-get update && apt-get upgrade -y && \
     *) final_arch="" ;; \
   esac && \
   \
+  talib_c="${TALIB_C_VERSION}" && \
   py_mm="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" && \
-  if [ -n "${TALIB_C_VERSION}" ]; then \
-    talib_c="${TALIB_C_VERSION}"; \
-  elif python3 -c "import sys; raise SystemExit(0 if sys.version_info[:2] >= (3, 14) else 1)"; then \
-    talib_c="0.7.1"; \
-  else \
-    talib_c="0.6.4"; \
-  fi && \
   echo "Python ${py_mm}; installing TA-Lib C ${talib_c}" && \
   \
   if [ -n "$final_arch" ]; then \
@@ -59,17 +52,9 @@ RUN apt-get update && apt-get upgrade -y && \
   python3 -m venv /venv && \
   . /venv/bin/activate && \
   pip install --no-cache-dir --upgrade pip cython && \
-  # Python TA-Lib package pins (paired with C version above):
-  # - 3.14+: C 0.7.1 + pip TA-Lib>=0.7.1 (0.6.x fails Cython build on 3.14; match C/Python 0.7.x)
-  # - deb arches (amd64/arm64): TA-Lib==0.6.5 on older Python
-  # - source path (e.g. armhf): TA-Lib==0.6.4 on older Python (0.6.5 failed there historically)
-  if python3 -c "import sys; raise SystemExit(0 if sys.version_info[:2] >= (3, 14) else 1)"; then \
-    pip install --no-cache-dir 'TA-Lib>=0.7.1' pandas; \
-  elif [ -n "$final_arch" ]; then \
-    pip install --no-cache-dir TA-Lib==0.6.5 pandas; \
-  else \
-    pip install --no-cache-dir TA-Lib==0.6.4 pandas; \
-  fi && \
+  # Pair Python package with C library 0.7.x on all lines (py312/313/314).
+  # Historical note: 0.6.5 pip failed on some armhf builds; 0.7.x works on py314 incl. armv7 — re-try all arches.
+  pip install --no-cache-dir 'TA-Lib>=0.7.1' pandas && \
   \
   # Clean up
   apt-get autoremove -y ${APT_PKG_TEMPORARY} && \
