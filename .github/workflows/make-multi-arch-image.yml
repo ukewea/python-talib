@@ -1,3 +1,5 @@
+# Full product matrix: one job per Python line (arches + manifest live in build-python-line.yaml).
+# Line pins (base_image / expected_python) — only place to edit when adding a version.
 name: Build, Multi-Arch Image
 
 on:
@@ -16,165 +18,30 @@ jobs:
     steps:
       - name: Set the Image Name
         id: set_output
-        run: echo "image_name=ghcr.io/${{ github.repository }}_single-arch" >> $GITHUB_OUTPUT
+        run: echo "image_name=ghcr.io/${{ github.repository }}_single-arch" >> "$GITHUB_OUTPUT"
 
-
-  # Python 3.12 builds
-  build-linux-amd64-py312:
+  # Matrix cells must stay in sync with Dockerfile Python↔base expectations.
+  build-line:
     needs: setup
-    uses: ./.github/workflows/build-image.yaml
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suffix: py312
+            base_image: ubuntu:24.04
+            expected_python: "3.12"
+            python_version: python3.12
+          - suffix: py313
+            base_image: ubuntu:25.10
+            expected_python: "3.13"
+            python_version: python3.13
+          - suffix: py314
+            base_image: ubuntu:26.04
+            expected_python: "3.14"
+            python_version: python3.14
+    uses: ./.github/workflows/build-python-line.yaml
     with:
-      images: ${{ needs.setup.outputs.image_name }}-py312
-      context: .
-      platforms: linux/amd64
-      runner-labels: "['ubuntu-latest']"
-      base_image: "ubuntu:24.04"
-      expected_python: "3.12"
-
-  # Local arm64 Docker on runners labeled arm64-native (exclusive of armhf-delegate).
-  build-linux-arm64-py312:
-    needs: setup
-    uses: ./.github/workflows/build-image.yaml
-    with:
-      images: ${{ needs.setup.outputs.image_name }}-py312
-      context: .
-      platforms: linux/arm64
-      runner-labels: "['self-hosted', 'Linux', 'ARM64', 'arm64-native']"
-      base_image: "ubuntu:24.04"
-      expected_python: "3.12"
-
-  # Orchestration only: any Linux runner labeled armhf-delegate (arch irrelevant); native arm/v7 via remote DOCKER_HOST.
-  # Set repository variable ARMHF_DOCKER_HOST (e.g. ssh://user@host) in GitHub settings — do not commit it.
-  build-linux-armv7-py312:
-    needs: setup
-    uses: ./.github/workflows/build-image.yaml
-    with:
-      images: ${{ needs.setup.outputs.image_name }}-py312
-      context: .
-      platforms: linux/arm/v7
-      runner-labels: "['self-hosted', 'Linux', 'armhf-delegate']"
-      base_image: "ubuntu:24.04"
-      expected_python: "3.12"
-      docker_host: ${{ vars.ARMHF_DOCKER_HOST }}
-
-  # Python 3.13 builds
-  build-linux-amd64-py313:
-    needs: setup
-    uses: ./.github/workflows/build-image.yaml
-    with:
-      images: ${{ needs.setup.outputs.image_name }}-py313
-      context: .
-      platforms: linux/amd64
-      runner-labels: "['ubuntu-latest']"
-      base_image: "ubuntu:25.10"
-      expected_python: "3.13"
-
-  build-linux-arm64-py313:
-    needs: setup
-    uses: ./.github/workflows/build-image.yaml
-    with:
-      images: ${{ needs.setup.outputs.image_name }}-py313
-      context: .
-      platforms: linux/arm64
-      runner-labels: "['self-hosted', 'Linux', 'ARM64', 'arm64-native']"
-      base_image: "ubuntu:25.10"
-      expected_python: "3.13"
-
-  # Orchestration only: any Linux runner labeled armhf-delegate (arch irrelevant); native arm/v7 via remote DOCKER_HOST.
-  # Set repository variable ARMHF_DOCKER_HOST in GitHub settings — do not commit it.
-  build-linux-armv7-py313:
-    needs: setup
-    uses: ./.github/workflows/build-image.yaml
-    with:
-      images: ${{ needs.setup.outputs.image_name }}-py313
-      context: .
-      platforms: linux/arm/v7
-      runner-labels: "['self-hosted', 'Linux', 'armhf-delegate']"
-      base_image: "ubuntu:25.10"
-      expected_python: "3.13"
-      docker_host: ${{ vars.ARMHF_DOCKER_HOST }}
-
-  # Python 3.14 builds (Ubuntu 26.04 default python3)
-  build-linux-amd64-py314:
-    needs: setup
-    uses: ./.github/workflows/build-image.yaml
-    with:
-      images: ${{ needs.setup.outputs.image_name }}-py314
-      context: .
-      platforms: linux/amd64
-      runner-labels: "['ubuntu-latest']"
-      base_image: "ubuntu:26.04"
-      expected_python: "3.14"
-
-  build-linux-arm64-py314:
-    needs: setup
-    uses: ./.github/workflows/build-image.yaml
-    with:
-      images: ${{ needs.setup.outputs.image_name }}-py314
-      context: .
-      platforms: linux/arm64
-      runner-labels: "['self-hosted', 'Linux', 'ARM64', 'arm64-native']"
-      base_image: "ubuntu:26.04"
-      expected_python: "3.14"
-
-  # Orchestration only: any Linux runner labeled armhf-delegate (arch irrelevant); native arm/v7 via remote DOCKER_HOST.
-  # Set repository variable ARMHF_DOCKER_HOST in GitHub settings — do not commit it.
-  build-linux-armv7-py314:
-    needs: setup
-    uses: ./.github/workflows/build-image.yaml
-    with:
-      images: ${{ needs.setup.outputs.image_name }}-py314
-      context: .
-      platforms: linux/arm/v7
-      runner-labels: "['self-hosted', 'Linux', 'armhf-delegate']"
-      base_image: "ubuntu:26.04"
-      expected_python: "3.14"
-      docker_host: ${{ vars.ARMHF_DOCKER_HOST }}
-
-  # Create multi-arch manifest for Python 3.12
-  build-py312:
-    needs:
-      - setup
-      - build-linux-amd64-py312
-      - build-linux-arm64-py312
-      - build-linux-armv7-py312
-    uses: ./.github/workflows/create-manifest.yaml
-    with:
-      base_image: "ubuntu:24.04"
-      python_version: "python3.12"
-      amd64_digest: ${{ needs.build-linux-amd64-py312.outputs.digest }}
-      arm64_digest: ${{ needs.build-linux-arm64-py312.outputs.digest }}
-      armv7_digest: ${{ needs.build-linux-armv7-py312.outputs.digest }}
-      single_arch_image_name: ${{ needs.setup.outputs.image_name }}-py312
-
-  # Create multi-arch manifest for Python 3.13
-  build-py313:
-    needs:
-      - setup
-      - build-linux-amd64-py313
-      - build-linux-arm64-py313
-      - build-linux-armv7-py313
-    uses: ./.github/workflows/create-manifest.yaml
-    with:
-      base_image: "ubuntu:25.10"
-      python_version: "python3.13"
-      amd64_digest: ${{ needs.build-linux-amd64-py313.outputs.digest }}
-      arm64_digest: ${{ needs.build-linux-arm64-py313.outputs.digest }}
-      armv7_digest: ${{ needs.build-linux-armv7-py313.outputs.digest }}
-      single_arch_image_name: ${{ needs.setup.outputs.image_name }}-py313
-
-  # Create multi-arch manifest for Python 3.14
-  build-py314:
-    needs:
-      - setup
-      - build-linux-amd64-py314
-      - build-linux-arm64-py314
-      - build-linux-armv7-py314
-    uses: ./.github/workflows/create-manifest.yaml
-    with:
-      base_image: "ubuntu:26.04"
-      python_version: "python3.14"
-      amd64_digest: ${{ needs.build-linux-amd64-py314.outputs.digest }}
-      arm64_digest: ${{ needs.build-linux-arm64-py314.outputs.digest }}
-      armv7_digest: ${{ needs.build-linux-armv7-py314.outputs.digest }}
-      single_arch_image_name: ${{ needs.setup.outputs.image_name }}-py314
+      image_name: ${{ needs.setup.outputs.image_name }}-${{ matrix.suffix }}
+      base_image: ${{ matrix.base_image }}
+      expected_python: ${{ matrix.expected_python }}
+      python_version: ${{ matrix.python_version }}

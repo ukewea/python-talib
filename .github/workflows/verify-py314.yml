@@ -1,5 +1,5 @@
 # Fast path: build + smoke Python 3.14 only (TA-Lib 0.7.x + ACCBANDS/AVGDEV/IMI).
-# Manual dispatch for iteration; full matrix remains make-multi-arch-image.yml.
+# Same line workflow as the full matrix; toggles for arches/manifest.
 name: Verify Python 3.14
 
 on:
@@ -19,69 +19,14 @@ on:
         default: false
 
 jobs:
-  setup:
-    runs-on: ubuntu-latest
-    outputs:
-      image_name: ${{ steps.set_output.outputs.image_name }}
-      base_image: ${{ steps.set_output.outputs.base_image }}
-      expected_python: ${{ steps.set_output.outputs.expected_python }}
-    steps:
-      - name: Set outputs (keep in sync with make-multi-arch-image.yml py314)
-        id: set_output
-        run: |
-          echo "image_name=ghcr.io/${{ github.repository }}_single-arch-py314" >> "$GITHUB_OUTPUT"
-          echo "base_image=ubuntu:26.04" >> "$GITHUB_OUTPUT"
-          echo "expected_python=3.14" >> "$GITHUB_OUTPUT"
-
-  build-linux-amd64-py314:
-    needs: setup
-    uses: ./.github/workflows/build-image.yaml
+  # Keep py314 pins aligned with make-multi-arch-image.yml matrix (py314 cell).
+  build-line:
+    uses: ./.github/workflows/build-python-line.yaml
     with:
-      images: ${{ needs.setup.outputs.image_name }}
-      context: .
-      platforms: linux/amd64
-      runner-labels: "['ubuntu-latest']"
-      base_image: ${{ needs.setup.outputs.base_image }}
-      expected_python: ${{ needs.setup.outputs.expected_python }}
-
-  build-linux-arm64-py314:
-    if: ${{ inputs.include_arm64 }}
-    needs: setup
-    uses: ./.github/workflows/build-image.yaml
-    with:
-      images: ${{ needs.setup.outputs.image_name }}
-      context: .
-      platforms: linux/arm64
-      runner-labels: "['self-hosted', 'Linux', 'ARM64', 'arm64-native']"
-      base_image: ${{ needs.setup.outputs.base_image }}
-      expected_python: ${{ needs.setup.outputs.expected_python }}
-
-  build-linux-armv7-py314:
-    if: ${{ inputs.include_armv7 }}
-    needs: setup
-    uses: ./.github/workflows/build-image.yaml
-    with:
-      images: ${{ needs.setup.outputs.image_name }}
-      context: .
-      platforms: linux/arm/v7
-      runner-labels: "['self-hosted', 'Linux', 'armhf-delegate']"
-      base_image: ${{ needs.setup.outputs.base_image }}
-      expected_python: ${{ needs.setup.outputs.expected_python }}
-      docker_host: ${{ vars.ARMHF_DOCKER_HOST }}
-
-  # Manifest only when all three arches ran (defaults can skip arm).
-  build-py314-manifest:
-    if: ${{ inputs.create_manifest && inputs.include_arm64 && inputs.include_armv7 }}
-    needs:
-      - setup
-      - build-linux-amd64-py314
-      - build-linux-arm64-py314
-      - build-linux-armv7-py314
-    uses: ./.github/workflows/create-manifest.yaml
-    with:
-      base_image: ${{ needs.setup.outputs.base_image }}
-      python_version: "python3.14"
-      amd64_digest: ${{ needs.build-linux-amd64-py314.outputs.digest }}
-      arm64_digest: ${{ needs.build-linux-arm64-py314.outputs.digest }}
-      armv7_digest: ${{ needs.build-linux-armv7-py314.outputs.digest }}
-      single_arch_image_name: ${{ needs.setup.outputs.image_name }}
+      image_name: ghcr.io/${{ github.repository }}_single-arch-py314
+      base_image: ubuntu:26.04
+      expected_python: "3.14"
+      python_version: python3.14
+      include_arm64: ${{ inputs.include_arm64 }}
+      include_armv7: ${{ inputs.include_armv7 }}
+      create_manifest: ${{ inputs.create_manifest }}

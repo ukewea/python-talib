@@ -12,12 +12,13 @@ This file is a **table of contents**, not an encyclopedia ([harness engineering]
 | Topic | Read first (do not invent from memory or this map) |
 |-------|-----------------------------------------------------|
 | Build recipe (`/venv`, TA-Lib install) | `Dockerfile` |
-| **Which Ubuntu base, `expected_python`, platform, runner** each job uses | **`.github/workflows/make-multi-arch-image.yml`** |
+| **Which Ubuntu base / `expected_python` each Python line uses** | **`.github/workflows/make-multi-arch-image.yml`** (`matrix.include`) |
+| **Arch platforms, runner labels, armhf `docker_host`** | **`.github/workflows/build-python-line.yaml`** |
 | Build / smoke / push steps | `.github/workflows/build-image.yaml` |
 | Multi-arch manifests + tags | `.github/workflows/create-manifest.yaml` |
 | Deeper agent docs | `docs/agent/` (index below) |
 
-**Version policy for markdown:** do **not** hardcode Ubuntu tags (e.g. `ubuntu:YY.MM`) or Python major.minor (e.g. `3.xx`) in `AGENTS.md` / `docs/agent/*`. Open `make-multi-arch-image.yml` for each Python line’s `base_image` and `expected_python`, and keep those fields consistent across the three arch jobs + matching manifest job. Dockerfile `ARG BASE_IMAGE` default is only the local-default; CI overrides it per job.
+**Version policy for markdown:** do **not** hardcode Ubuntu tags (e.g. `ubuntu:YY.MM`) or Python major.minor (e.g. `3.xx`) in `AGENTS.md` / `docs/agent/*`. Open `make-multi-arch-image.yml` `matrix.include` for each Python line’s `base_image` / `expected_python` / `python_version`. Arch runners live in `build-python-line.yaml`. Dockerfile `ARG BASE_IMAGE` default is only the local-default; CI overrides it per line.
 
 If narrative and YAML disagree, **YAML/Dockerfile win** — then fix the docs (without reintroducing version tables here).
 
@@ -73,11 +74,15 @@ Smoke asserts Python major.minor, SMA, and ACCBANDS / AVGDEV / IMI usability.
 ## Workflow graph
 
 ```
-make-multi-arch-image.yml   (full matrix: py312/313/314 × arches + manifests)
-verify-py314.yml            (manual: py314 only — fast iteration; optional arches/manifest)
-  ├── build-image.yaml      (per arch; smoke via scripts/smoke_test.py; push single-arch)
-  └── create-manifest.yaml  (multi-arch tags after digests exist; optional on verify-py314)
+make-multi-arch-image.yml   (matrix of Python lines only — pins live in that file)
+verify-py314.yml            (manual: same line workflow, py314 pins + arch/manifest toggles)
+  └── build-python-line.yaml  (amd64 + arm64 + armv7 + optional manifest once)
+        ├── build-image.yaml      (per arch; smoke via scripts/smoke_test.py; push)
+        └── create-manifest.yaml  (multi-arch tags after digests exist)
 ```
+
+**Add a Python line:** one `matrix.include` row in `make-multi-arch-image.yml` (and Dockerfile support).  
+**Change runner/arch wiring:** edit `build-python-line.yaml` only.
 
 ## Common tasks (short)
 
@@ -85,7 +90,7 @@ verify-py314.yml            (manual: py314 only — fast iteration; optional arc
 
 **Bump TA-Lib:** follow [`docs/agent/talib-pins.md`](docs/agent/talib-pins.md) (C ARG **and** both pip pins in `Dockerfile`).
 
-**Change platforms/runners:** edit explicit jobs in `make-multi-arch-image.yml`; keep arm64 on `arm64-native`, armv7 on `armhf-delegate` + `docker_host` var; update docs only for process/contract changes.
+**Change platforms/runners:** edit `build-python-line.yaml`; keep arm64 on `arm64-native`, armv7 on `armhf-delegate` + `docker_host` var; update docs only for process/contract changes.
 
 ## PR / commit rules
 

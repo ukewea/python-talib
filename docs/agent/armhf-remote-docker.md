@@ -9,7 +9,7 @@ Abstract roles only. No hostnames, usernames, IPs, or live endpoints in git.
 - arm64 native builds run on a **different** runner labeled **`arm64-native`** (that role *does* need aarch64 + local Docker).
 - Image build / smoke / push for armv7 use a **remote native armhf Docker daemon** via `DOCKER_HOST`.
 - Value comes from GitHub Actions repository variable **`ARMHF_DOCKER_HOST`** → workflow input `docker_host` → job env `DOCKER_HOST`.
-- Wiring: `make-multi-arch-image.yml` passes `docker_host: ${{ vars.ARMHF_DOCKER_HOST }}` on armv7 jobs only.
+- Wiring: `build-python-line.yaml` passes `docker_host: ${{ vars.ARMHF_DOCKER_HOST }}` on the armv7 job only.
 
 ## Runner labels (exclusive roles)
 

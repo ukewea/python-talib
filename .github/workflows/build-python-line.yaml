@@ -1,0 +1,90 @@
+# One Python product line: amd64 + arm64 + armv7 builds (smoke) and optional multi-arch manifest.
+# Called from make-multi-arch-image.yml (matrix) and verify-py314.yml (fast path).
+name: Build Python line
+
+on:
+  workflow_call:
+    inputs:
+      image_name:
+        description: Single-arch image name (e.g. ghcr.io/org/repo_single-arch-py314)
+        type: string
+        required: true
+      base_image:
+        description: Ubuntu base image tag (e.g. ubuntu:26.04)
+        type: string
+        required: true
+      expected_python:
+        description: Python major.minor expected in smoke (e.g. 3.14)
+        type: string
+        required: true
+      python_version:
+        description: Tag fragment for multi-arch image (e.g. python3.14)
+        type: string
+        required: true
+      include_arm64:
+        description: Build/smoke linux/arm64
+        type: boolean
+        required: false
+        default: true
+      include_armv7:
+        description: Build/smoke linux/arm/v7 via ARMHF_DOCKER_HOST
+        type: boolean
+        required: false
+        default: true
+      create_manifest:
+        description: Create multi-arch manifest after all three arches succeed
+        type: boolean
+        required: false
+        default: true
+
+jobs:
+  build-amd64:
+    uses: ./.github/workflows/build-image.yaml
+    with:
+      images: ${{ inputs.image_name }}
+      context: .
+      platforms: linux/amd64
+      runner-labels: "['ubuntu-latest']"
+      base_image: ${{ inputs.base_image }}
+      expected_python: ${{ inputs.expected_python }}
+
+  # Local arm64 Docker on runners labeled arm64-native (exclusive of armhf-delegate).
+  build-arm64:
+    if: ${{ inputs.include_arm64 }}
+    uses: ./.github/workflows/build-image.yaml
+    with:
+      images: ${{ inputs.image_name }}
+      context: .
+      platforms: linux/arm64
+      runner-labels: "['self-hosted', 'Linux', 'ARM64', 'arm64-native']"
+      base_image: ${{ inputs.base_image }}
+      expected_python: ${{ inputs.expected_python }}
+
+  # Orchestration only: armhf-delegate runner; native arm/v7 via remote DOCKER_HOST.
+  # Repo variable ARMHF_DOCKER_HOST — do not commit host values.
+  build-armv7:
+    if: ${{ inputs.include_armv7 }}
+    uses: ./.github/workflows/build-image.yaml
+    with:
+      images: ${{ inputs.image_name }}
+      context: .
+      platforms: linux/arm/v7
+      runner-labels: "['self-hosted', 'Linux', 'armhf-delegate']"
+      base_image: ${{ inputs.base_image }}
+      expected_python: ${{ inputs.expected_python }}
+      docker_host: ${{ vars.ARMHF_DOCKER_HOST }}
+
+  create-manifest:
+    if: ${{ inputs.create_manifest && inputs.include_arm64 && inputs.include_armv7 }}
+    needs:
+      - build-amd64
+      - build-arm64
+      - build-armv7
+    uses: ./.github/workflows/create-manifest.yaml
+    with:
+      base_image: ${{ inputs.base_image }}
+      python_version: ${{ inputs.python_version }}
+      amd64_digest: ${{ needs.build-amd64.outputs.digest }}
+      arm64_digest: ${{ needs.build-arm64.outputs.digest }}
+      armv7_digest: ${{ needs.build-armv7.outputs.digest }}
+      single_arch_image_name: ${{ inputs.image_name }}
