@@ -31,6 +31,7 @@ jobs:
       base_image: "ubuntu:24.04"
       expected_python: "3.12"
 
+  # Local arm64 Docker on runners labeled arm64-native (exclusive of armhf-delegate).
   build-linux-arm64-py312:
     needs: setup
     uses: ./.github/workflows/build-image.yaml
@@ -38,11 +39,11 @@ jobs:
       images: ${{ needs.setup.outputs.image_name }}-py312
       context: .
       platforms: linux/arm64
-      runner-labels: "['self-hosted', 'Linux', 'ARM64']"
+      runner-labels: "['self-hosted', 'Linux', 'ARM64', 'arm64-native']"
       base_image: "ubuntu:24.04"
       expected_python: "3.12"
 
-  # Orchestration on ARM64 self-hosted runner; native arm/v7 build via remote DOCKER_HOST.
+  # Orchestration only: any Linux runner labeled armhf-delegate (arch irrelevant); native arm/v7 via remote DOCKER_HOST.
   # Set repository variable ARMHF_DOCKER_HOST (e.g. ssh://user@host) in GitHub settings — do not commit it.
   build-linux-armv7-py312:
     needs: setup
@@ -51,7 +52,7 @@ jobs:
       images: ${{ needs.setup.outputs.image_name }}-py312
       context: .
       platforms: linux/arm/v7
-      runner-labels: "['self-hosted', 'Linux', 'ARM64']"
+      runner-labels: "['self-hosted', 'Linux', 'armhf-delegate']"
       base_image: "ubuntu:24.04"
       expected_python: "3.12"
       docker_host: ${{ vars.ARMHF_DOCKER_HOST }}
@@ -75,11 +76,11 @@ jobs:
       images: ${{ needs.setup.outputs.image_name }}-py313
       context: .
       platforms: linux/arm64
-      runner-labels: "['self-hosted', 'Linux', 'ARM64']"
+      runner-labels: "['self-hosted', 'Linux', 'ARM64', 'arm64-native']"
       base_image: "ubuntu:25.10"
       expected_python: "3.13"
 
-  # Orchestration on ARM64 self-hosted runner; native arm/v7 build via remote DOCKER_HOST.
+  # Orchestration only: any Linux runner labeled armhf-delegate (arch irrelevant); native arm/v7 via remote DOCKER_HOST.
   # Set repository variable ARMHF_DOCKER_HOST in GitHub settings — do not commit it.
   build-linux-armv7-py313:
     needs: setup
@@ -88,7 +89,7 @@ jobs:
       images: ${{ needs.setup.outputs.image_name }}-py313
       context: .
       platforms: linux/arm/v7
-      runner-labels: "['self-hosted', 'Linux', 'ARM64']"
+      runner-labels: "['self-hosted', 'Linux', 'armhf-delegate']"
       base_image: "ubuntu:25.10"
       expected_python: "3.13"
       docker_host: ${{ vars.ARMHF_DOCKER_HOST }}
@@ -112,11 +113,11 @@ jobs:
       images: ${{ needs.setup.outputs.image_name }}-py314
       context: .
       platforms: linux/arm64
-      runner-labels: "['self-hosted', 'Linux', 'ARM64']"
+      runner-labels: "['self-hosted', 'Linux', 'ARM64', 'arm64-native']"
       base_image: "ubuntu:26.04"
       expected_python: "3.14"
 
-  # Orchestration on ARM64 self-hosted runner; native arm/v7 build via remote DOCKER_HOST.
+  # Orchestration only: any Linux runner labeled armhf-delegate (arch irrelevant); native arm/v7 via remote DOCKER_HOST.
   # Set repository variable ARMHF_DOCKER_HOST in GitHub settings — do not commit it.
   build-linux-armv7-py314:
     needs: setup
@@ -125,7 +126,7 @@ jobs:
       images: ${{ needs.setup.outputs.image_name }}-py314
       context: .
       platforms: linux/arm/v7
-      runner-labels: "['self-hosted', 'Linux', 'ARM64']"
+      runner-labels: "['self-hosted', 'Linux', 'armhf-delegate']"
       base_image: "ubuntu:26.04"
       expected_python: "3.14"
       docker_host: ${{ vars.ARMHF_DOCKER_HOST }}

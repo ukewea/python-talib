@@ -37,7 +37,7 @@ Overrides convenience. Applies to edits, commits, PRs, issues, comments, and log
 | Need | Go to |
 |------|--------|
 | TA-Lib C vs pip pins; how to bump | [`docs/agent/talib-pins.md`](docs/agent/talib-pins.md) |
-| armv7 remote Docker contract, variable format, failure modes | [`docs/agent/armhf-remote-docker.md`](docs/agent/armhf-remote-docker.md) |
+| armv7 remote Docker + dual ARM runner labels (`arm64-native` / `armhf-delegate`) | [`docs/agent/armhf-remote-docker.md`](docs/agent/armhf-remote-docker.md) |
 | What to verify before finishing | [`docs/agent/definition-of-done.md`](docs/agent/definition-of-done.md) |
 | Human pull/run/compose | `README.md` |
 
@@ -47,7 +47,7 @@ Overrides convenience. Applies to edits, commits, PRs, issues, comments, and log
 - **Architectures:** `linux/amd64`, `linux/arm64`, `linux/arm/v7` (see workflow `platforms`).
 - **Orchestration:** explicit jobs per Python × arch (not `strategy.matrix`).
 - **Triggers:** schedule every 2 months on the 15th; `workflow_dispatch`; push disabled (commented).
-- **Runners (abstract):** amd64 = GitHub-hosted `ubuntu-latest`; arm64/armv7 jobs use `['self-hosted', 'Linux', 'ARM64']`; armv7 Docker via `vars.ARMHF_DOCKER_HOST` (see armhf doc).
+- **Runners (abstract):** amd64 = GitHub-hosted `ubuntu-latest`; arm64 native = `['self-hosted', 'Linux', 'ARM64', 'arm64-native']`; armv7 orchestration = `['self-hosted', 'Linux', 'armhf-delegate']` (host arch irrelevant — only checkout + Docker client) + remote Docker via `vars.ARMHF_DOCKER_HOST` (see armhf doc). Exclusive role labels so native arm64 and armhf orchestration do not share one queue.
 - **Python lines:** multiple product lines (job prefixes like `py312` / `py313` / `py314`)—each has its own `base_image` + `expected_python` in the YAML. Discover current values there.
 
 ## Commands (patterns — fill values from YAML)
@@ -89,7 +89,7 @@ make-multi-arch-image.yml
 
 **Bump TA-Lib:** follow [`docs/agent/talib-pins.md`](docs/agent/talib-pins.md) (C ARG **and** both pip pins in `Dockerfile`).
 
-**Change platforms/runners:** edit explicit jobs in `make-multi-arch-image.yml`; keep armv7 on ARM64 labels + `docker_host` var; update docs only for process/contract changes.
+**Change platforms/runners:** edit explicit jobs in `make-multi-arch-image.yml`; keep arm64 on `arm64-native`, armv7 on `armhf-delegate` + `docker_host` var; update docs only for process/contract changes.
 
 ## PR / commit rules
 
