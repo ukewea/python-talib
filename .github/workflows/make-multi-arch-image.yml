@@ -8,10 +8,25 @@ on:
   #     - main
   schedule:
     - cron: '0 0 15 */2 *'
+    # Monthly keepalive only: scheduled workflows in public repos are auto-disabled
+    # after 60 days of repo inactivity, and the bimonthly build gap can exceed that.
+    - cron: '0 0 1 * *'
   workflow_dispatch:
 
 jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Re-enable workflow to reset the inactivity timer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow enable "${{ github.workflow }}" -R "${{ github.repository }}"
+
   setup:
+    # Skip the build on keepalive-only runs.
+    if: github.event.schedule != '0 0 1 * *'
     runs-on: ubuntu-latest
     outputs:
       image_name: ${{ steps.set_output.outputs.image_name }}
